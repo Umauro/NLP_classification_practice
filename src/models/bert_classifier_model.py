@@ -1,9 +1,10 @@
-from typing_extensions import runtime
+import warnings
+import json
+
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
-import warnings
-import json
+from transformers import BertModel
 
 
 class BertClassifierConfig:
@@ -11,11 +12,11 @@ class BertClassifierConfig:
     def __init__(
         self,
         n_hidden_layers: int = 1,
-        hidden_units: list[int] = [512],
+        hidden_units: list = [512,],
         use_dropout: bool = False,
         dropout_prob: float = 0,
         initial_lr: float = 0.001,
-        bert_pooled_output: int = 712
+        bert_pooled_output: int = 768
     ):
         """
             Parameters
@@ -99,4 +100,133 @@ class BertClassifierConfig:
             config_dict['bert_pooled_output']
         )
 
-        return config_instance  
+        return config_instance
+
+class BertClassifierModel(pl.LightningModule):
+    """
+        Class with Bert Classifier Model
+    """
+    def __init__(self, config: BertClassifierConfig):
+        """
+            Parameters:
+
+            config: BertClassifierConfig
+                object with model configuration parameters
+        """
+        super().__init__()
+        modules = list()
+        
+        for index in range(config.n_hidden_layers):
+            if index != 0:
+                in_features = config.hidden_units[index - 1]
+            else:
+                in_features = config.bert_pooled_output 
+                
+            out_features = config.hidden_units[index]
+            
+            modules.append(
+                nn.Linear(in_features, out_features)
+            )
+            modules.append(
+                nn.ReLU(inplace = True)
+            )
+            
+            if config.use_dropout:
+                modules.append(
+                    nn.Dropout(config.dropout_prob)
+                )
+        modules.append(nn.Linear(config.hidden_units[-1],3))
+            
+        self.lr = config.initial_lr
+        self.bert = BertModel.from_pretrained('bert-base-uncased')
+        self.cls = nn.Sequential(*modules)
+        self.cls.apply(self.weight_init)
+    
+    def weight_init(self,module):
+        """
+            Weight initializer for classification layers
+        """
+        if isinstance(module, nn.Linear):
+            # official implementation uses weight from a normal dist with mean 0 and std 0.02
+            nn.init.normal_(module.weight.data, 0, 0.02)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias.data)
+
+    def forward(self, input_ids, attention_mask, token_type_ids):
+        """
+            Compute the model forward pass
+
+            Parameters:
+            
+            input_ids: Pytorch Tensor
+                input_ids tensor from BertTokenizer
+            attention_mask: Pytorch Tensor
+                attention_mask tensor from BertTokenizer
+            token_type_ids: Pytorch Tensor
+                token_type_ids tensor from BertTokenizer
+        """
+        bert_output = self.bert(
+            input_ids = input_ids, 
+            attention_mask = attention_mask, 
+            token_type_ids = token_type_ids
+        )
+        pooled_output = bert_output[1]
+        output = self.cls(pooled_output)
+        output = nn.functional.softmax(output, dim = 1)
+        return output
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters, lr = self.lr)
+        return optimizer
+
+    def training_step(self, train_batch, batch_idx):
+        """
+            Compute the loss training step
+
+            Parameters:
+
+            train_batch: dict
+                Dictionary obtained from CoronaTweetsDataset with training samples
+        """
+        input_ids = train_batch['input_ids']
+        attention_mask = train_batch['attention_mask']
+        token_type_ids = train_batch['token_type_ids']
+        labels = train_batch['labels']
+        
+        # this is similar to forward, but Pytorch Lightning recommend separate inference from training
+        bert_output = self.bert(input_ids, attention_mask, token_type_ids)
+        pooled_output = bert_output[1]
+        output = self.cls(pooled_output)
+        loss = nn.CrossEntropyLoss(output, labels)
+        self.log('train_loss', loss)
+        return loss
+
+    def validation_step(self, val_batch, batch_idx):
+        """
+            Compute a validation step
+
+            Parameters:
+
+            val_batch: dict
+                Dictionary obtained from CoronaTweetsDataset with validation samples
+        """
+        input_ids = val_batch['input_ids']
+        attention_mask = val_batch['attention_mask']
+        token_type_ids = val_batch['token_type_ids']
+        labels = val_batch['labels']
+        
+        # this is similar to forward, but Pytorch Lightning recommend separate inference from training
+        bert_output = self.bert(input_ids, attention_mask, token_type_ids)
+        pooled_output = bert_output[1]
+        loss = nn.functional.cross_entropy(self.cls(pooled_output), labels)
+        self.log('val_loss', loss)
+        
+
+
+    
+
+
+
+
+
+

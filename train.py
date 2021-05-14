@@ -1,9 +1,13 @@
 import argparse
 import pandas as pd
 
+from sklearn.model_selection import train_test_split
+from transformers import BertTokenizer
+from torch.utils.data import DataLoader
+
 from src.models.train_utils import TrainConfig
-from sklearn.model_selection import train_test_split 
 from src.data.dfs_schemas import ProcessedDataframeSchema
+from src.models.corona_tweet_dataset import CoronaTweetsDataset
 
 
 MAX_SEQ_LEN = 128
@@ -50,9 +54,28 @@ if __name__ == '__main__':
         stratify = df.original_label.values,
         random_state = 42 #always use the same validation set
     ) 
-    print('Using a training set of {} samples, validating with {} samples'.format(df_train.shape[0], df_val.shape[0]))
+    print(
+        'Using a training set of {} samples, validating with {} samples'.format(
+            df_train.shape[0], 
+            df_val.shape[0]
+        )
+    )
 
-
+    # Dataset and DataLoaders
+    # TODO: download this and load from local file xD
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased') 
+    train_dataset = CoronaTweetsDataset(df_train, tokenizer, MAX_SEQ_LEN)
+    val_dataset = CoronaTweetsDataset(df_val, tokenizer, MAX_SEQ_LEN)
+    
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size = train_config.batch_size,
+        shuffle = True
+    )
+    val_dataloader = DataLoader(
+        val_dataset,
+        batch_size = train_config.batch_size
+    )
 
 
 

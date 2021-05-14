@@ -2,9 +2,8 @@
     Pre-process dataset dataframes
 """
 import pandas as pd
-import errno
 import argparse
-from data_utils import (
+from .data_utils import (
     preprocessing_pipeline
 )
 

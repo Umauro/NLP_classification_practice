@@ -29,6 +29,7 @@ def one_hot_encoding(df, prefix, label_column):
     """
         One Hot encodes Sentiment labels
     """ 
+    df['original_label'] = df[label_column]
     return pd.get_dummies(df, prefix = prefix, columns = [label_column])
 
 def replace_pattern(df, regex_pattern, replace_value):

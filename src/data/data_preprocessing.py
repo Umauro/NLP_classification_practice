@@ -3,7 +3,7 @@
 """
 import pandas as pd
 import argparse
-from .data_utils import (
+from data_utils import (
     preprocessing_pipeline
 )
 

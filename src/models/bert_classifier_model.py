@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 from transformers import BertModel
-
+from .train_utils import TrainConfig
 
 class BertClassifierConfig:
     """Class with configuration parameters for BertClassifierModel"""
@@ -98,6 +98,27 @@ class BertClassifierConfig:
             config_dict['dropout_prob'],
             config_dict['initial_lr'],
             config_dict['bert_pooled_output']
+        )
+
+        return config_instance
+
+    @classmethod
+    def load_from_train_config(cls, train_config: TrainConfig):
+        """
+            Load config from training configuration object
+
+            Parameters:
+
+            train_config: TrainConfig object
+                
+        """
+        config_instance = BertClassifierConfig(
+            train_config.n_hidden_layers,
+            train_config.hidden_units,
+            train_config.use_dropout,
+            train_config.dropout_prob,
+            train_config.initial_lr,
+            train_config.bert_pooled_output
         )
 
         return config_instance

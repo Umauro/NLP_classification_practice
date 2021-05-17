@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from src.models.train_utils import TrainConfig
 from src.data.dfs_schemas import ProcessedDataframeSchema
 from src.models.corona_tweet_dataset import CoronaTweetsDataset
+from src.models.bert_classifier_model import BertClassifierConfig, BertClassifierModel
 
 
 MAX_SEQ_LEN = 128
@@ -26,8 +27,8 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint_path', type = str, required = False)
     parser.add_argument('--load_config', type = bool, required = False, default = False, action = argparse.BooleanOptionalAction)
     parser.add_argument('--config_path', type = str, required = False)
-    parser.add_argument('--n_hidden_units', type = int, required = False)
-    parser.add_argument('--hidden_units', type = list, required = False)
+    parser.add_argument('--n_hidden_layers', type = int, required = False)
+    parser.add_argument('--hidden_units', type = int, nargs='+', required = False)
     parser.add_argument('--use_dropout', type = bool, required = False, action = argparse.BooleanOptionalAction)
     parser.add_argument('--dropout_prob', type = float, required = False)
     parser.add_argument('--bert_pooled_output', type = int, required = False)
@@ -77,10 +78,14 @@ if __name__ == '__main__':
         batch_size = train_config.batch_size
     )
 
+    # Classification model
+    if train_config.load_config:
+        model_config = BertClassifierConfig.load_from_json(
+            train_config.config_path
+        )
+    else:
+        model_config = BertClassifierConfig.load_from_train_config(
+            train_config
+    )
 
-
-
-
-
-
-
+    model = BertClassifierModel(model_config)

@@ -159,7 +159,7 @@ class BertClassifierModel(pl.LightningModule):
         modules.append(nn.Linear(config.hidden_units[-1],3))
             
         self.lr = config.initial_lr
-        self.bert = BertModel.from_pretrained('bert-base-uncased')
+        self.bert = BertModel.from_pretrained('bert-base-uncased') #TODO: download bert model c:
         self.cls = nn.Sequential(*modules)
         self.cls.apply(self.weight_init)
     
@@ -197,7 +197,7 @@ class BertClassifierModel(pl.LightningModule):
         return output
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters, lr = self.lr)
+        optimizer = torch.optim.Adam(self.parameters(), lr = self.lr)
         return optimizer
 
     def training_step(self, train_batch, batch_idx):
@@ -218,7 +218,7 @@ class BertClassifierModel(pl.LightningModule):
         bert_output = self.bert(input_ids, attention_mask, token_type_ids)
         pooled_output = bert_output[1]
         output = self.cls(pooled_output)
-        loss = nn.CrossEntropyLoss(output, labels)
+        loss = nn.functional.cross_entropy(output, labels)
         self.log('train_loss', loss)
         return loss
 
@@ -237,7 +237,10 @@ class BertClassifierModel(pl.LightningModule):
         labels = val_batch['labels']
         
         # this is similar to forward, but Pytorch Lightning recommend separate inference from training
-        bert_output = self.bert(input_ids, attention_mask, token_type_ids)
+        bert_output = self.bert(
+            input_ids, 
+            attention_mask = attention_mask, 
+            token_type_ids = token_type_ids)
         pooled_output = bert_output[1]
         loss = nn.functional.cross_entropy(self.cls(pooled_output), labels)
         self.log('val_loss', loss)

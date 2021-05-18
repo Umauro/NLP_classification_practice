@@ -1,9 +1,13 @@
 import argparse
 import pandas as pd
+import torch
 
 from sklearn.model_selection import train_test_split
 from transformers import BertTokenizer
 from torch.utils.data import DataLoader
+from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
+from pytorch_lightning.loggers import TensorBoardLogger
 
 from src.models.train_utils import TrainConfig
 from src.data.dfs_schemas import ProcessedDataframeSchema
@@ -11,7 +15,7 @@ from src.models.corona_tweet_dataset import CoronaTweetsDataset
 from src.models.bert_classifier_model import BertClassifierConfig, BertClassifierModel
 
 
-MAX_SEQ_LEN = 128
+MAX_SEQ_LEN = 64
 
   
 if __name__ == '__main__':
@@ -71,11 +75,13 @@ if __name__ == '__main__':
     train_dataloader = DataLoader(
         train_dataset,
         batch_size = train_config.batch_size,
-        shuffle = True
+        shuffle = True,
+        num_workers = 4
     )
     val_dataloader = DataLoader(
         val_dataset,
-        batch_size = train_config.batch_size
+        batch_size = train_config.batch_size,
+        num_workers = 4
     )
 
     # Classification model
@@ -86,6 +92,33 @@ if __name__ == '__main__':
     else:
         model_config = BertClassifierConfig.load_from_train_config(
             train_config
-    )
+        )
 
     model = BertClassifierModel(model_config)
+
+    # Configure Trainer
+    callback_list = list()
+    if train_config.checkpoint:
+        callback_list.append(ModelCheckpoint(
+            dirpath = train_config.checkpoint_path,
+            filename = '{epoch}-{train_loss}-{val_loss}',
+            monitor = 'val_loss',
+            save_top_k = 3, #TODO: pass this as argument,
+            mode = 'min',
+
+        ))
+
+    trainer = Trainer(
+        max_epochs = train_config.max_epochs,
+        gpus = -1, #TODO: pass this as argument
+        auto_select_gpus = True, #TODO: same,
+        callbacks = callback_list,
+        logger = TensorBoardLogger(
+            save_dir = train_config.log_path,
+            name = train_config.log_name
+        )
+    )
+    
+    # Train
+    print(torch.cuda.memory_summary(device=None, abbreviated=False))
+    trainer.fit(model, train_dataloader, val_dataloader)

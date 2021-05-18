@@ -32,19 +32,22 @@ class CoronaTweetsDataset(Dataset):
             idx = idx.toList()
         
         text = self.df.OriginalTweet.iloc[idx]
-        labels = self.df[['label_negative','label_neutral','label_positive']].iloc[[idx]].values
-        tokenized_text = self.tokenizer(
+        labels = np.argmax(self.df[['label_negative','label_neutral','label_positive']].iloc[[idx]].values)
+        tokenized_text = self.tokenizer.encode_plus(
             text,
+            None,
+            add_special_tokens = True, 
             max_length = self.max_seq_len,
             padding = 'max_length',
             return_tensors='pt',
-            truncation=True
+            truncation=True,
+            return_token_type_ids = True
         )
 
         sample = {
-            'input_ids': tokenized_text['input_ids'],
-            'attention_mask': tokenized_text['attention_mask'],
-            'token_type_ids': tokenized_text['token_type_ids'],
+            'input_ids': tokenized_text['input_ids'][0],
+            'attention_mask': tokenized_text['attention_mask'][0],
+            'token_type_ids': tokenized_text['token_type_ids'][0],
             'labels': torch.tensor(labels, dtype = torch.long)
         }
 

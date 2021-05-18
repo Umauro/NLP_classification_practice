@@ -4,6 +4,7 @@ import json
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
+import torchmetrics
 from transformers import BertModel
 from .train_utils import TrainConfig
 
@@ -162,6 +163,8 @@ class BertClassifierModel(pl.LightningModule):
         self.bert = BertModel.from_pretrained('bert-base-uncased') #TODO: download bert model c:
         self.cls = nn.Sequential(*modules)
         self.cls.apply(self.weight_init)
+        self.f1_score = torchmetrics.F1(num_classes = 3)
+        self.accuracy = torchmetrics.Accuracy(num_classes = 3, average = None)
     
     def weight_init(self,module):
         """
@@ -220,6 +223,14 @@ class BertClassifierModel(pl.LightningModule):
         output = self.cls(pooled_output)
         loss = nn.functional.cross_entropy(output, labels)
         self.log('train_loss', loss)
+        
+        # Calcule step acc and F1
+        softmaxed_output = nn.functional.softmax(output, dim = 1)
+        self.accuracy(softmaxed_output, labels)
+        self.f1_score(softmaxed_output, labels)
+        self.log('train_acc', self.accuracy, on_step = True, on_epoch = False)
+        self.log('train_f1',  on_step = True, on_epoch = False)
+        
         return loss
 
     def validation_step(self, val_batch, batch_idx):
@@ -244,6 +255,16 @@ class BertClassifierModel(pl.LightningModule):
         pooled_output = bert_output[1]
         loss = nn.functional.cross_entropy(self.cls(pooled_output), labels)
         self.log('val_loss', loss)
+
+        # calcule validation acc and f1
+        softmaxed_output = nn.functional.softmax(self.cls(pooled_output), dim = 1)
+        self.accuracy(softmaxed_output, labels)
+        self.f1_score(softmaxed_output, labels)
+        self.log('val_acc', on_step = True, on_epoch = True)
+        self.log('val_f1', on_step = True, on_epoch = True)
+
+
+
         
 
 

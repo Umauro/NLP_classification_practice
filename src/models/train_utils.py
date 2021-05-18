@@ -29,7 +29,7 @@ class TrainConfig:
         self.use_dropout = args.use_dropout
         self.dropout_prob = args.dropout_prob
         self.bert_pooled_output = args.bert_pooled_output
-
+        self.freeze_bert = args.freeze_bert
         self.validate_config()
 
     def validate_config(self):

@@ -36,6 +36,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_dropout', type = bool, required = False, action = argparse.BooleanOptionalAction)
     parser.add_argument('--dropout_prob', type = float, required = False)
     parser.add_argument('--bert_pooled_output', type = int, required = False)
+    parser.add_argument('--freeze_bert', type = bool, required = False, default = True, action = argparse.BooleanOptionalAction)
 
     train_config = TrainConfig(parser)
 

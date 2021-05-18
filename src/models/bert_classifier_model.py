@@ -17,7 +17,8 @@ class BertClassifierConfig:
         use_dropout: bool = False,
         dropout_prob: float = 0,
         initial_lr: float = 0.001,
-        bert_pooled_output: int = 768
+        bert_pooled_output: int = 768,
+        freeze_bert: bool = True
     ):
         """
             Parameters
@@ -34,6 +35,8 @@ class BertClassifierConfig:
                 initial learning rate for optimizer.
             bert_pooled_output: int
                 size of Bert pooled output.
+            freeze_bert: bool
+                Freeze bert parameters during training
         """
 
         if dropout_prob < 0 or dropout_prob >= 1:
@@ -51,6 +54,7 @@ class BertClassifierConfig:
         self.dropout_prob = dropout_prob
         self.initial_lr = initial_lr
         self.bert_pooled_output = bert_pooled_output
+        self.freeze_bert = freeze_bert
 
     def save_config(self, path: str):
         """
@@ -70,7 +74,8 @@ class BertClassifierConfig:
             "use_dropout": self.use_dropout,
             "dropout_prob": self.dropout_prob,
             "initial_lr": self.initial_lr,
-            "bert_pooled_output": self.bert_pooled_output
+            "bert_pooled_output": self.bert_pooled_output,
+            "freeze_bert": self.freeze_bert
         }     
         with open(path, "w") as config_file:
             json.dump(config_dict, config_file)
@@ -98,7 +103,8 @@ class BertClassifierConfig:
             config_dict['use_dropout'],
             config_dict['dropout_prob'],
             config_dict['initial_lr'],
-            config_dict['bert_pooled_output']
+            config_dict['bert_pooled_output'],
+            config_dict['freeze_bert']
         )
 
         return config_instance
@@ -119,7 +125,8 @@ class BertClassifierConfig:
             train_config.use_dropout,
             train_config.dropout_prob,
             train_config.initial_lr,
-            train_config.bert_pooled_output
+            train_config.bert_pooled_output,
+            train_config.freeze_bert
         )
 
         return config_instance
@@ -164,7 +171,12 @@ class BertClassifierModel(pl.LightningModule):
         self.cls = nn.Sequential(*modules)
         self.cls.apply(self.weight_init)
         self.f1_score = torchmetrics.F1(num_classes = 3)
-        self.accuracy = torchmetrics.Accuracy(num_classes = 3, average = None)
+        self.accuracy = torchmetrics.Accuracy(num_classes = 3)
+
+        if config.freeze_bert:
+            for param in self.bert.parameters():
+                param.requires_grad = False
+
     
     def weight_init(self,module):
         """
@@ -229,7 +241,7 @@ class BertClassifierModel(pl.LightningModule):
         self.accuracy(softmaxed_output, labels)
         self.f1_score(softmaxed_output, labels)
         self.log('train_acc', self.accuracy, on_step = True, on_epoch = False)
-        self.log('train_f1',  on_step = True, on_epoch = False)
+        self.log('train_f1', self.f1_score, on_step = True, on_epoch = False)
         
         return loss
 
@@ -260,8 +272,8 @@ class BertClassifierModel(pl.LightningModule):
         softmaxed_output = nn.functional.softmax(self.cls(pooled_output), dim = 1)
         self.accuracy(softmaxed_output, labels)
         self.f1_score(softmaxed_output, labels)
-        self.log('val_acc', on_step = True, on_epoch = True)
-        self.log('val_f1', on_step = True, on_epoch = True)
+        self.log('val_acc', self.accuracy, on_step = True, on_epoch = True)
+        self.log('val_f1', self.f1_score, on_step = True, on_epoch = True)
 
 
 

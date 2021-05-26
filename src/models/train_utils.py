@@ -24,8 +24,7 @@ class TrainConfig:
         self.checkpoint_path = args.checkpoint_path
         self.load_config = args.load_config
         self.config_path = args.config_path
-        self.n_hidden_layers = args.n_hidden_layers
-        self.hidden_units = args.hidden_units
+        self.n_lstm = args.n_lstm
         self.use_dropout = args.use_dropout
         self.dropout_prob = args.dropout_prob
         self.bert_pooled_output = args.bert_pooled_output
@@ -57,13 +56,12 @@ class TrainConfig:
             self.parser.error('--load_config is activated but config_path was not specified.')
 
         if not self.load_config:
-            if self.n_hidden_layers is None:
-                setting_argument_warning('load_config', 'n_hidden_layers', '1')
-                self.n_hidden_layers = 1
-            
-            if self.hidden_units is None:
-                setting_argument_warning('load_config', 'hidden_units', '[512]')
-                self.hidden_units = [512]
+            if self.n_lstm is None:
+                if self.freeze_bert:
+                    setting_argument_warning('load_config', 'n_lstm', '2')
+                    self.n_lstm = 2
+                else:
+                    setting_argument_warning('load_config','n_lstm',0)
             
             if self.use_dropout is None:
                 setting_argument_warning('load_config', 'use_dropout', 'False')

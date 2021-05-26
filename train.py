@@ -31,8 +31,7 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint_path', type = str, required = False)
     parser.add_argument('--load_config', type = bool, required = False, default = False, action = argparse.BooleanOptionalAction)
     parser.add_argument('--config_path', type = str, required = False)
-    parser.add_argument('--n_hidden_layers', type = int, required = False)
-    parser.add_argument('--hidden_units', type = int, nargs='+', required = False)
+    parser.add_argument('--n_lstm', type = int, required = False)
     parser.add_argument('--use_dropout', type = bool, required = False, action = argparse.BooleanOptionalAction)
     parser.add_argument('--dropout_prob', type = float, required = False)
     parser.add_argument('--bert_pooled_output', type = int, required = False)
@@ -105,8 +104,7 @@ if __name__ == '__main__':
             filename = '{epoch}-{train_loss}-{val_loss}',
             monitor = 'val_loss',
             save_top_k = 3, #TODO: pass this as argument,
-            mode = 'min',
-
+            mode = 'min'
         ))
 
     trainer = Trainer(

@@ -164,7 +164,10 @@ class BertClassifierModel(pl.LightningModule):
                 modules.append(
                     nn.Dropout(config.dropout_prob)
                 )
-        modules.append(nn.Linear(config.hidden_units[-1],3))
+        if config.n_hidden_layers:
+            modules.append(nn.Linear(config.hidden_units[-1],3))
+        else:
+            modules.append(nn.Linear(config.bert_pooled_output,3))
             
         self.lr = config.initial_lr
         self.bert = BertModel.from_pretrained('bert-base-uncased') #TODO: download bert model c:

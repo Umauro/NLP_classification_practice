@@ -6,7 +6,8 @@ from sklearn.model_selection import train_test_split
 from transformers import BertTokenizer
 from torch.utils.data import DataLoader
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 
 from src.models.train_utils import TrainConfig
@@ -106,6 +107,11 @@ if __name__ == '__main__':
             save_top_k = 3, #TODO: pass this as argument,
             mode = 'min'
         ))
+    
+    callback_list.append(
+        EarlyStopping(monitor='val_loss')
+    )
+
 
     trainer = Trainer(
         max_epochs = train_config.max_epochs,

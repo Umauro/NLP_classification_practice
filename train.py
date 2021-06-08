@@ -126,3 +126,11 @@ if __name__ == '__main__':
     
     # Train
     trainer.fit(model, train_dataloader, val_dataloader)
+
+    # Save Model Config
+    model_config.save_config(
+        '{}/{}_config.json'.format(
+            train_config.checkpoint_path,
+            train_config.log_name
+        )
+    )
